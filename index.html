@@ -1,50 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>AIS Tracking Indonesia</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-  <style>
-    body { margin: 0; }
-    #map { height: 100vh; }
-  </style>
+    <meta charset="UTF-8">
+    <title>AISStream Live Tracker</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
+        #log { 
+            background: #222; color: #0f0; padding: 15px; 
+            height: 400px; overflow-y: scroll; border-radius: 5px;
+            font-family: monospace; font-size: 12px;
+        }
+        .status { margin-bottom: 10px; font-weight: bold; }
+    </style>
 </head>
 <body>
 
-<div id="map"></div>
+    <h2>Live AIS Ship Tracker</h2>
+    <div class="status">Status: <span id="status">Terputus</span></div>
+    <div id="log">Menunggu data...</div>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const API_KEY = "233625ff89679f8bc8dd840b926d66dbe4a0a44b"; // Ganti dengan API Key Anda
+        const logElement = document.getElementById('log');
+        const statusElement = document.getElementById('status');
 
-<script>
-  const socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
+        // 1. Inisialisasi koneksi WebSocket
+        const socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
 
-  socket.onopen = () => {
-    console.log("✅ CONNECTED");
+        socket.onopen = function(e) {
+            statusElement.innerText = "Terhubung! Mengirim langganan...";
+            statusElement.style.color = "green";
 
-    // ⚠️ area kecil dulu (Jakarta)
-    socket.send(JSON.stringify({
-      APIKey: "233625ff89679f8bc8dd840b926d66dbe4a0a44b",
-      BoundingBoxes: [[[ -6.3, 106.6 ], [ -6.0, 107.0 ]]]
-    }));
-  };
+            // 2. Kirim pesan berlangganan (Subscription)
+            // Contoh ini mengambil data di seluruh dunia (Bounding Box luas)
+            const subscriptionMessage = {
+                APIKey: API_KEY,
+                BoundingBoxes: [[[-90, -180], [90, 180]]], 
+                FilterMessageTypes: ["PositionReport"] // Hanya laporan posisi
+            };
 
-  socket.onmessage = (event) => {
-    console.log("DATA MASUK 🔥");
-  };
+            socket.send(JSON.stringify(subscriptionMessage));
+        };
 
-  socket.onerror = () => {
-    console.log("❌ ERROR");
-  };
+        socket.onmessage = function(event) {
+            const aisData = JSON.parse(event.data);
+            
+            // 3. Menampilkan data kapal yang masuk
+            const shipName = aisData.MetaData.ShipName || "Unknown";
+            const mmsi = aisData.MetaData.MMSI;
+            const lat = aisData.Message.PositionReport.Latitude;
+            const lon = aisData.Message.PositionReport.Longitude;
 
-  socket.onclose = (e) => {
-    console.log("❌ CLOSED", e.code);
-  };
-</script>
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] Kapal: ${shipName} (MMSI: ${mmsi}) | Lokasi: ${lat}, ${lon}`;
+            
+            logElement.prepend(entry); // Tampilkan data terbaru di atas
+        };
 
+        socket.onclose = function(event) {
+            statusElement.innerText = "Koneksi Terputus";
+            statusElement.style.color = "red";
+        };
+
+        socket.onerror = function(error) {
+            console.error(`[error] ${error.message}`);
+        };
+    </script>
 </body>
 </html>
