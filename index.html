@@ -19,11 +19,12 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 🔑 API KEY KAMU
   const API_KEY = "jwBXVNXWIEPRzhnCbVDyMkmCg";
 
-  // ❗ GANTI INI DARI SWAGGER (WAJIB)
-  const API_URL = "https://ISI_DARI_SWAGGER_DI_SINI";
+  // ⚠️ ini MMSI kapal (bisa kamu ganti)
+  const MMSI = "512005706";
+
+  const API_URL = `https://api.marinesia.com/api/v1/vessel/${MMSI}/location/latest?key=${API_KEY}`;
 
   const map = L.map('map').setView([-2.5, 118], 5);
 
@@ -31,50 +32,41 @@
     maxZoom: 18,
   }).addTo(map);
 
-  let shipMarkers = {};
+  let marker = null;
 
   async function loadAIS() {
     try {
-      const response = await fetch(API_URL, {
-        headers: {
-          "x-api-key": API_KEY
-        }
-      });
-
+      const response = await fetch(API_URL);
       const data = await response.json();
 
-      console.log("DATA MASUK:", data); // 🔍 DEBUG
+      console.log("DATA:", data);
 
-      // kalau data bukan array (kadang dibungkus)
-      const ships = Array.isArray(data) ? data : data.data || data.results || [];
+      // ⚠️ biasanya data ada di dalam object
+      const lat = data.latitude || data.lat || data.data?.latitude;
+      const lon = data.longitude || data.lon || data.data?.longitude;
 
-      ships.forEach(ship => {
-        const id = ship.mmsi || ship.id || Math.random();
+      const speed = data.speed || data.sog || data.data?.speed || 0;
 
-        const lat = ship.latitude || ship.lat || ship.position?.lat;
-        const lon = ship.longitude || ship.lon || ship.position?.lon;
+      if (!lat || !lon) {
+        console.log("Data tidak ada koordinat");
+        return;
+      }
 
-        const name = ship.name || ship.vessel_name || "Unknown";
-        const speed = ship.speed || ship.sog || 0;
+      if (marker) {
+        marker.setLatLng([lat, lon]);
+      } else {
+        marker = L.marker([lat, lon])
+          .addTo(map)
+          .bindPopup(`
+            <b>MMSI: ${MMSI}</b><br>
+            Speed: ${speed} knots
+          `);
+      }
 
-        if (!lat || !lon) return;
-
-        if (shipMarkers[id]) {
-          shipMarkers[id].setLatLng([lat, lon]);
-        } else {
-          const marker = L.marker([lat, lon])
-            .addTo(map)
-            .bindPopup(`
-              <b>${name}</b><br>
-              Speed: ${speed} knots
-            `);
-
-          shipMarkers[id] = marker;
-        }
-      });
+      map.setView([lat, lon], 7);
 
     } catch (err) {
-      console.error("ERROR FETCH:", err);
+      console.error("ERROR:", err);
     }
   }
 
