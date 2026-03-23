@@ -1,79 +1,44 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>AIS Tracking Indonesia</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-  <style>
-    body { margin: 0; }
-    #map { height: 100vh; }
-  </style>
-</head>
-<body>
-
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
-  const map = L.map('map').setView([-2.5, 118], 5);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-  }).addTo(map);
-
-  let ships = {};
-
   const socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
 
   socket.onopen = () => {
-    console.log("Connected to AIS Stream");
+    console.log("CONNECTED ✅");
 
     socket.send(JSON.stringify({
       APIKey: "233625ff89679f8bc8dd840b926d66dbe4a0a44b",
-      
-      // 🇮🇩 Indonesia bounding box
-      BoundingBoxes: [
-        [[-11, 95], [6, 141]]
-      ]
+      BoundingBoxes: [[[ -11, 95 ], [ 6, 141 ]]]
     }));
   };
 
   socket.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
+    try {
+      const msg = JSON.parse(event.data);
 
-    if (!msg.Message || !msg.Message.PositionReport) return;
+      if (!msg.Message) return;
 
-    const ship = msg.Message.PositionReport;
+      // 🔥 support lebih banyak tipe pesan
+      const report = msg.Message.PositionReport || msg.Message.StandardClassBPositionReport;
 
-    const lat = ship.Latitude;
-    const lon = ship.Longitude;
-    const mmsi = ship.UserID;
+      if (!report) return;
 
-    if (!lat || !lon) return;
+      const lat = report.Latitude;
+      const lon = report.Longitude;
+      const mmsi = report.UserID;
 
-    if (ships[mmsi]) {
-      ships[mmsi].setLatLng([lat, lon]);
-    } else {
-      const marker = L.marker([lat, lon])
-        .addTo(map)
-        .bindPopup(`MMSI: ${mmsi}`);
+      if (!lat || !lon) return;
 
-      ships[mmsi] = marker;
+      console.log("Kapal:", mmsi, lat, lon);
+
+    } catch (e) {
+      console.log("Parse error");
     }
   };
 
   socket.onerror = (err) => {
-    console.error("WebSocket error:", err);
+    console.error("ERROR ❌", err);
   };
 
-  socket.onclose = () => {
-    console.log("Disconnected");
+  socket.onclose = (e) => {
+    console.log("CLOSED ❌", e);
   };
 </script>
-
-</body>
-</html>
