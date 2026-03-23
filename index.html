@@ -21,67 +21,28 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 🗺️ INIT MAP
-  const map = L.map('map').setView([-2.5, 118], 5);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-  }).addTo(map);
-
-  let ships = {};
-
-  // 🔥 CONNECT AIS STREAM
   const socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
 
   socket.onopen = () => {
-    console.log("CONNECTED ✅");
+    console.log("✅ CONNECTED");
 
+    // ⚠️ area kecil dulu (Jakarta)
     socket.send(JSON.stringify({
       APIKey: "233625ff89679f8bc8dd840b926d66dbe4a0a44b",
-      BoundingBoxes: [[[ -11, 95 ], [ 6, 141 ]]]
+      BoundingBoxes: [[[ -6.3, 106.6 ], [ -6.0, 107.0 ]]]
     }));
   };
 
   socket.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-
-      if (!msg.Message) return;
-
-      const report =
-        msg.Message.PositionReport ||
-        msg.Message.StandardClassBPositionReport;
-
-      if (!report) return;
-
-      const lat = report.Latitude;
-      const lon = report.Longitude;
-      const mmsi = report.UserID;
-
-      if (!lat || !lon) return;
-
-      // 🚢 tampilkan ke peta
-      if (ships[mmsi]) {
-        ships[mmsi].setLatLng([lat, lon]);
-      } else {
-        const marker = L.marker([lat, lon])
-          .addTo(map)
-          .bindPopup(`MMSI: ${mmsi}`);
-
-        ships[mmsi] = marker;
-      }
-
-    } catch (e) {
-      console.log("Parse error");
-    }
+    console.log("DATA MASUK 🔥");
   };
 
-  socket.onerror = (err) => {
-    console.error("ERROR ❌", err);
+  socket.onerror = () => {
+    console.log("❌ ERROR");
   };
 
   socket.onclose = (e) => {
-    console.log("CLOSED ❌", e);
+    console.log("❌ CLOSED", e.code);
   };
 </script>
 
