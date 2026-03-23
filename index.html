@@ -5,9 +5,32 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
+  <style>
+    body { margin: 0; }
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
+  // 🗺️ INIT MAP
+  const map = L.map('map').setView([-2.5, 118], 5);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+  }).addTo(map);
+
+  let ships = {};
+
+  // 🔥 CONNECT AIS STREAM
   const socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
 
   socket.onopen = () => {
@@ -25,8 +48,9 @@
 
       if (!msg.Message) return;
 
-      // 🔥 support lebih banyak tipe pesan
-      const report = msg.Message.PositionReport || msg.Message.StandardClassBPositionReport;
+      const report =
+        msg.Message.PositionReport ||
+        msg.Message.StandardClassBPositionReport;
 
       if (!report) return;
 
@@ -36,7 +60,16 @@
 
       if (!lat || !lon) return;
 
-      console.log("Kapal:", mmsi, lat, lon);
+      // 🚢 tampilkan ke peta
+      if (ships[mmsi]) {
+        ships[mmsi].setLatLng([lat, lon]);
+      } else {
+        const marker = L.marker([lat, lon])
+          .addTo(map)
+          .bindPopup(`MMSI: ${mmsi}`);
+
+        ships[mmsi] = marker;
+      }
 
     } catch (e) {
       console.log("Parse error");
