@@ -20,10 +20,9 @@
 
 <script>
   const API_KEY = "jwBXVNXWIEPRzhnCbVDyMkmCg";
-
-  // ⚠️ ini MMSI kapal (bisa kamu ganti)
   const MMSI = "512005706";
 
+  // ✅ ENDPOINT ASLI (INI YANG BENAR)
   const API_URL = `https://api.marinesia.com/api/v1/vessel/${MMSI}/location/latest?key=${API_KEY}`;
 
   const map = L.map('map').setView([-2.5, 118], 5);
@@ -41,14 +40,12 @@
 
       console.log("DATA:", data);
 
-      // ⚠️ biasanya data ada di dalam object
       const lat = data.latitude || data.lat || data.data?.latitude;
       const lon = data.longitude || data.lon || data.data?.longitude;
-
       const speed = data.speed || data.sog || data.data?.speed || 0;
 
       if (!lat || !lon) {
-        console.log("Data tidak ada koordinat");
+        console.log("Koordinat tidak ada");
         return;
       }
 
@@ -66,7 +63,7 @@
       map.setView([lat, lon], 7);
 
     } catch (err) {
-      console.error("ERROR:", err);
+      console.error("ERROR FETCH:", err);
     }
   }
 
